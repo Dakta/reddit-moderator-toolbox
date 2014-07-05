@@ -33,8 +33,6 @@ analytics.init = function init() {
         // Run the rest of your code.
         // If your extension depends on GA, initialize it from here.
         // ...
-        window.eval("var _gaq = _gaq || [];");
-        console.log("analytics loaded");
     }
 
     function get(url, callback) {
@@ -43,10 +41,14 @@ analytics.init = function init() {
         x.open('GET', url);
         x.send();
     }
+
+    window._gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-52486209-1']);
+    _gaq.push(['_setAllowLinker', true]);
+    _gaq.push(['_trackPageview']); // we can also track click events: http://src.chromium.org/viewvc/chrome/trunk/src/chrome/common/extensions/docs/examples/tutorials/analytics/popup.js
 }
 
 TB.register_module(analytics);
-
 
 }
 
