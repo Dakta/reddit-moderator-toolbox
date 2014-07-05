@@ -11,7 +11,8 @@
 		"notifications",
 		"tabs",
 		"storage",
-		"unlimitedStorage"
+		"unlimitedStorage",
+		"https://ssl.google-analytics.com/ga.js"
 	],
 	"icons": {
 		"16": "icon16.png",
@@ -39,6 +40,7 @@
 				"tbplugins.js",
 				"tbutils.js",
 				"tbobject.js", // goes before any modules
+				"modules/analytics.js", // load me first
 				"modules/core.js",
 				"modules/notifier.js",
 				"modules/domaintagger.js",
@@ -62,5 +64,5 @@
 			]
 		}
 	],
-	"web_accessible_resources": ["libs/jquery-2.1.1.min.js", "libs/snuownd.js", "libs/worker-css.js"]
+	"web_accessible_resources": ["ga.js", "libs/jquery-2.1.1.min.js", "libs/snuownd.js", "libs/worker-css.js"]
 }
