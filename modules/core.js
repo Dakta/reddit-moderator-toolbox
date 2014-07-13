@@ -8,14 +8,14 @@ core = new TB.Module("General"); // because the settings tab should say this
 
 core.init = function init() {
     // Nothing here, for now.
-}
+};
 
 TB.register_module(core);
 }
 
 (function () {
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage");
+    window.addEventListener("TBObjectLoaded", function () {
+        console.log("got tbobject");
         core();
     });
 })();

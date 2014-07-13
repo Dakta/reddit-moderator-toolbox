@@ -1,8 +1,11 @@
 function notifier() {
-    if (!TBUtils.logged || TBUtils.isToolbarPage) return;
+    if (!TBUtils.logged || TBUtils.isToolbarPage)
+        return;
     $.log('Loading Notifier Module');
-
-    $('body').addClass('mod-toolbox');
+    
+    var $body = $('body');
+    $body.addClass('mod-toolbox');
+    
     //
     // preload some generic variables
     //
@@ -16,6 +19,8 @@ function notifier() {
         modSubreddits = TBUtils.getSetting('Notifier', 'modsubreddits', 'mod'),
         unmoderatedSubreddits = TBUtils.getSetting('Notifier', 'unmoderatedsubreddits', 'mod'),
         modmailSubreddits = TBUtils.getSetting('Notifier', 'modmailsubreddits', 'mod'),
+        modmailSubredditsFromPro = TBUtils.getSetting('Notifier', 'modmailsubredditsfrompro', false),
+        modmailFilteredSubreddits = modmailSubreddits,
         notifierEnabled = TBUtils.getSetting('Notifier', 'enabled', true),
         shortcuts = TBUtils.getSetting('Notifier', 'shortcuts', '-'),
         shortcuts2 = TBUtils.getSetting('Notifier', 'shortcuts2', {}),
@@ -46,6 +51,14 @@ function notifier() {
         settingSub = TBUtils.getSetting('Utils', 'settingsub', '');
 
 
+    // use filter subs from MMP, if appropriate
+    if (modmailSubredditsFromPro) {
+        modmailFilteredSubreddits = 'mod';
+        if (TBUtils.getSetting('ModMailPro', 'filteredsubs', []).length > 0) {
+            modmailFilteredSubreddits += '-' + TBUtils.getSetting('ModMailPro', 'filteredsubs', []).join('-');
+        }
+    }
+
     // convert some settings values
     // TODO: add a fixer in the first run function for next release and drop this section
     if (modNotifications == 'on') {
@@ -69,12 +82,16 @@ function notifier() {
     } else {
         messageunreadurl = '/message/inbox/';
     }
-    if (modmailunreadlink) {
-        modmailunreadurl = '/r/' + modmailSubreddits + '/about/message/moderator/unread/';
-    } else {
-        modmailunreadurl = '/r/' + modmailSubreddits + '/about/message/moderator/';
-    }
 
+    // this is a placeholder from issue #217
+    // TODO: provide an option for this once we fix modmailpro filtering
+    modmailunreadurl = '/message/moderator/'
+    if (modmailunreadlink) {
+        // modmailunreadurl = '/r/' + modmailFilteredSubreddits + '/message/moderator/unread';
+        modmailunreadurl += 'unread/';
+    } else {
+        // modmailunreadurl = '/r/' + modmailFilteredSubreddits + '/message/moderator/';
+    }
 
     // Module settings.
     var mmpEnabled = TBUtils.getSetting('ModMailPro', 'enabled', true),
@@ -86,15 +103,17 @@ function notifier() {
         commentsEnabled = TBUtils.getSetting('CommentsMod', 'enabled', true),
         modmatrixEnabled = TBUtils.getSetting('ModMatrix', 'enabled', true);
 
-    // MTE settings.
+    // QT settings.
     var hideactioneditems = TBUtils.getSetting('QueueTools', 'hideactioneditems', false),
         ignoreonapprove = TBUtils.getSetting('QueueTools', 'ignoreonapprove', false),
-        removalreasons = TBUtils.getSetting('RemovalReasons', 'removalreasons', true),
-        commentreasons = TBUtils.getSetting('RemovalReasons', 'commentreasons', false),
         rtscomment = TBUtils.getSetting('QueueTools', 'rtscomment', true),
         sortmodqueue = TBUtils.getSetting('QueueTools', 'sortmodqueue', false),
         sortunmoderated = TBUtils.getSetting('QueueTools', 'sortunmoderated', false),
         linkToQueues = TBUtils.getSetting('QueueTools', 'linktoqueues', false);
+
+    // RR settings
+    //  removalreasons = TBUtils.getSetting('RemovalReasons', 'removalreasons', true),
+    var commentreasons = TBUtils.getSetting('RemovalReasons', 'commentreasons', false);
 
     // cache settings.
     var shortLength = TBUtils.getSetting('cache', 'shortlength', 15),
@@ -115,8 +134,10 @@ function notifier() {
         <span id="tb-toolbarcounters">\
             <a title="no mail" href="http://www.reddit.com/message/inbox/" class="nohavemail" id="tb-mail"></a> \
             <a href="http://www.reddit.com/message/inbox/" class="tb-toolbar" id="tb-mailCount"></a>\
-            <a title="modmail" href="http://www.reddit.com/r/' + modmailSubreddits + '/about/message/moderator/" id="tb-modmail" class="nohavemail"></a>\
-            <a href="http://www.reddit.com/r/' + modmailSubreddits + '/about/message/moderator/" class="tb-toolbar" id="tb-modmailcount"></a>\
+            <!-- <a title="modmail" href="http://www.reddit.com/r/' + modmailFilteredSubreddits + '/message/moderator/" id="tb-modmail" class="nohavemail"></a> -->\
+            <!-- <a href="http://www.reddit.com/r/' + modmailFilteredSubreddits + '/message/moderator/" class="tb-toolbar" id="tb-modmailcount"></a> -->\
+            <a title="modmail" href="http://www.reddit.com/message/moderator/" id="tb-modmail" class="nohavemail"></a>\
+            <a href="http://www.reddit.com/message/moderator/" class="tb-toolbar" id="tb-modmailcount"></a>\
             <a title="modqueue" href="http://www.reddit.com/r/' + modSubreddits + '/about/modqueue" id="tb-modqueue"></a> \
             <a href="http://www.reddit.com/r/' + modSubreddits + '/about/modqueue" class="tb-toolbar" id="tb-queueCount"></a>\
         </span>\
@@ -145,23 +166,16 @@ function notifier() {
 
     $console.appendTo('body').hide();
 
-    $('.tb-debug-input').keyup(function (e) {
-        if (e.keyCode == 13) {
-            $.log(eval($(this).val()));
-            $(this).val(''); // clear line
-        }
-    });
-
-    $('body').append(modbar);
+    $body.append(modbar);
 
     if (TBUtils.betaMode) {
-        $('body').append('<div id="tb-my-subreddits" style="display: none;"><h1>Subreddits you moderate</h1> <input id="tb-livefilter-input" type="text" placeholder="live search" value=""> <span class="tb-livefilter-count"></span><br><table id="tb-my-subreddit-list"></table>');
-        $('body').find('#tb-toolbarshortcuts').before('<a href="javascript:void(0)" id="tb-toolbar-mysubs">Moderated Subreddits</a> ');
+        $body.append('<div id="tb-my-subreddits" style="display: none;"><h1>Subreddits you moderate</h1> <input id="tb-livefilter-input" type="text" placeholder="live search" value=""> <span class="tb-livefilter-count"></span><br><table id="tb-my-subreddit-list"></table>');
+        $body.find('#tb-toolbarshortcuts').before('<a href="javascript:void(0)" id="tb-toolbar-mysubs">Moderated Subreddits</a> ');
         TBUtils.getModSubs(function () {
             $(TBUtils.mySubsData).each(function () {
-                $('body').find('#tb-my-subreddits table').append('\
+                $body.find('#tb-my-subreddits table').append('\
                 <tr data-subreddit="'+ this.subreddit +'"><td><a href="/r/'+ this.subreddit +'" target="_blank">/r/'+ this.subreddit +'</a></td> \
-                <td class="tb-my-subreddits-subreddit"><a title="/r/'+ this.subreddit +' modmail!" target="_blank" href="http://www.reddit.com/r/'+ this.subreddit +'/about/message/moderator" class="generic-mail"></a>\
+                <td class="tb-my-subreddits-subreddit"><a title="/r/'+ this.subreddit +' modmail!" target="_blank" href="http://www.reddit.com/r/'+ this.subreddit +'/message/moderator" class="generic-mail"></a>\
                 <a title="/r/'+ this.subreddit +' modqueue" target="_blank" href="http://www.reddit.com/r/'+ this.subreddit +'/about/modqueue" class="generic-modqueue"></a>\
                 <a title="/r/'+ this.subreddit +' unmoderated" target="_blank" href="http://www.reddit.com/r/'+ this.subreddit +'/about/unmoderated" class="generic-unmoderated"></a></td></tr>\
                 ');
@@ -169,13 +183,13 @@ function notifier() {
             $('.tb-livefilter-count').text($('#tb-my-subreddits table tr:visible').length);
         });
 
-        $('body').on('click', '#tb-toolbar-mysubs', function() {
-            $('body').find('#tb-my-subreddits').toggle();
+        $body.on('click', '#tb-toolbar-mysubs', function() {
+            $body.find('#tb-my-subreddits').toggle();
         });
 
-        $('body').find('#tb-livefilter-input').keyup(function(){
+        $body.find('#tb-livefilter-input').keyup(function(){
             var LiveSearchValue = $(this).val();
-            $('body').find('#tb-my-subreddits table tr').each(function(){
+            $body.find('#tb-my-subreddits table tr').each(function(){
                 var $this = $(this),
                     subredditName = $this.attr('data-subreddit');
 
@@ -251,7 +265,7 @@ function notifier() {
     toggleMenuBar(modbarHidden);
 
     // Show/hide menubar
-    $('body').on('click', '.tb-bottombar-unhide, .tb-bottombar-hide', function () {
+    $body.on('click', '.tb-bottombar-unhide, .tb-bottombar-hide', function () {
         toggleMenuBar($(this).hasClass('tb-bottombar-hide'));
     });
 
@@ -275,7 +289,7 @@ function notifier() {
 
     /// Console stuff
     // Show/hide console
-    $('body').on('click', '#tb-toggle-console, #tb-debug-hide', function () {
+    $body.on('click', '#tb-toggle-console, #tb-debug-hide', function () {
         if (!consoleShowing) {
             $console.show();
         } else {
@@ -287,22 +301,30 @@ function notifier() {
     });
 
     // Set console scroll
-    $('body').on('click', '#tb-console-lockscroll', function () {
+    $body.on('click', '#tb-console-lockscroll', function () {
         lockscroll = !lockscroll;
         TBUtils.setSetting('Notifier', 'lockscroll', lockscroll);
     });
 
     /*
     // Console copy... needs work
-    $('body').on('click', '#tb-console-copy', function () {
+    $body.on('click', '#tb-console-copy', function () {
         lockscroll = !lockscroll;
         TBUtils.setSetting('Notifier', 'lockscroll', lockscroll)
     });
     */
 
     // Console clear
-    $('body').on('click', '.tb-console-clear', function () {
+    $body.on('click', '.tb-console-clear', function () {
         TBUtils.log = [];
+    });
+
+    // Run console input
+    $('.tb-debug-input').keyup(function (e) {
+        if (e.keyCode == 13) {
+            $.log(eval($(this).val()));
+            $(this).val(''); // clear line
+        }
     });
     /// End console stuff
 
@@ -354,32 +376,17 @@ function notifier() {
             </div></div>\
             ';
         $(html).appendTo('body').show();
-        $('body').css('overflow', 'hidden');
+        $body.css('overflow', 'hidden');
 
         // Settings for the tool bar.
-        var htmltoolbar = '\
-            <div class="tb-window-content-toolbar">\
+        var $toolboxSettings = $('\
+            <div class="tb-window-content-toolbox">\
             <p'+ ((betaMode) ? '' : ' style="display:none"') +'>\
                 Import/export toolbox settings to a wiki page:<br>\
                 <input type="text" name="settingssub" placeholder="Fill in a private subreddit where you are mod..." value="' + TBUtils.htmlEncode(unescape(settingSub)) + '">\
                 <input class="tb-settings-import" type="button" value="import">\
                 <input class="tb-settings-export" type="button" value="export">\
                 <b> Important:</b> This will reload the page without saving!\
-            </p>\
-            <p>\
-                Multireddit of subs you want displayed in the modqueue counter:<br>\
-                <input type="text" name="modsubreddits" value="' + TBUtils.htmlEncode(unescape(modSubreddits)) + '">\
-            </p>\
-            <p>\
-                Multireddit of subs you want displayed in the unmoderated counter:<br>\
-                <input type="text" name="unmoderatedsubreddits" value="' + TBUtils.htmlEncode(unescape(unmoderatedSubreddits)) + '">\
-            </p>\
-            <p>\
-                Multireddit of subs you want displayed in the modmail counter:<br>\
-                <input type="text" name="modmailsubreddits" value="' + TBUtils.htmlEncode(unescape(modmailSubreddits)) + '">\
-            </p>\
-            <p>\
-                <label><input type="checkbox" name="unmoderatedon" ' + unmoderatedonchecked + '> Show icon for unmoderated.</label>\
             </p>\
             <p>\
                 <label><input type="checkbox" id="compactHide" ' + ((compactHide) ? "checked" : "") + '> Use compact mode for mod bar </label>\
@@ -390,73 +397,16 @@ function notifier() {
             <p>\
                 <label><input type="checkbox" id="betaMode" ' + ((betaMode) ? "checked" : "") + '> Enable beta features</label>\
             </p>\
-            <div class="tb-help-main-content">Edit toolbar stuff</div>\
+            <div class="tb-help-main-content">Edit Toolbox general settings</div>\
             </div>\
-            ';
+            ');
+        // // we really shouldn't set these inline.
+        // $toolboxSettings.find('input[name=modmailsubreddits]').prop('disabled', modmailSubredditsFromPro);
 
-        var notifierSettings = $('<div class="tb-notifiersettings">\
-            <p>\
-                <label><input type="checkbox" name="consolidatedmessages" ' + consolidatedmessageschecked + '> Consolidate notifications (x new messages) instead of individual notifications.</label>\
-            </p>\
-            <p>\
-                <label style="width: 30%; display: inline-block;"><input type="checkbox" name="messagenotifications" ' + messagenotificationschecked + '> Get notifications for new messages</label>\
-                <label><input type="checkbox" name="messageunreadlink" ' + messageunreadlinkchecked + '> Link to /message/unread/ if unread messages are present</label>\
-            </p>\
-            <p>\
-                <label style="width: 30%; display: inline-block;"><input type="checkbox" name="modmailnotifications" ' + modmailnotificationschecked + '> Get modmail notifications</label>\
-                <label><input type="checkbox" name="modmailunreadlink" ' + modmailunreadlinkchecked + '> Link to /r/' + modmailSubreddits + '/about/message/moderator/unread/ if unread messages are present</label>\
-            </p>\
-            <p>\
-            <label><input type="checkbox" id="straightToInbox" ' + ((straightToInbox) ? "checked" : "") + '> When clicking a comment notification go to the inbox.</label>\
-            </p>\
-            <p>\
-                <label><input type="checkbox" name="modnotifications" ' + modnotificationschecked + '> Get modqueue notifications</label>\
-            </p>\
-            <p>\
-                <label><input type="checkbox" name="unmoderatednotifications" ' + unmoderatednotificationschecked + '> Get unmoderated queue notifications</label>\
-            </p></div>').hide();
-
-        $(htmltoolbar).appendTo('.tb-window-content');
-
-        // Add notifier settings, show them if not enabled.
-        $('.tb-window-content-toolbar').prepend(notifierSettings);
-        if (notifierEnabled) $(notifierSettings).show();
-
-        $('<a href="javascript:;" class="tb-window-content-toolbar">Toolbar Settings</a>').appendTo('.tb-window-tabs');
-        $('.tb-help-main').attr('currentpage', 'tb-window-content-toolbar');
-
-
-
-        //$("input[name=modsubreddits]").val(unescape(modSubreddits));
-        //$("input[name=unmoderatedsubreddits]").val(unescape(unmoderatedSubreddits));
-        // Edit shortcuts
-        //console.log(htmlshorcuts);
-        var htmlshorcuts = '\
-        <div class="tb-window-content-shortcuts">\
-        <table class="tb-window-content-shortcuts-table"><tr><td>name</td><td> url </td><td class="tb-window-content-shortcuts-td-remove"> remove</td></tr>\
-        </table>\
-        <a class="tb-add-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconAdd + '" /></a>\
-        <div class="tb-help-main-content">Add or remove shortcuts here!</div>\
-        </div>\
-            ';
-        $(htmlshorcuts).appendTo('.tb-window-content').hide();
-
-        if ($.isEmptyObject(shortcuts2)) {
-            $('<tr class="tb-window-content-shortcuts-tr"><td><input type="text" name="name"> </td><td> <input type="text" name="url">  <td><td class="tb-window-content-shortcuts-td-remove"> \
-        <a class="tb-remove-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconClose + '" /></a></td></tr>\
-        ').appendTo('.tb-window-content-shortcuts-table');
-
-        } else {
-            $.each(shortcuts2, function (index, value) {
-                shortcutinput = '<tr class="tb-window-content-shortcuts-tr"><td><input type="text" value="' + TBUtils.htmlEncode(unescape(index)) + '" name="name"> </td><td> <input type="text" value="' + TBUtils.htmlEncode(unescape(value)) + '" name="url"> <td><td class="tb-window-content-shortcuts-td-remove">\
-        <a class="tb-remove-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconClose + '" /></a></td></tr>\
-        <br><br>';
-                //console.log(shortcutinput);
-                $(shortcutinput).appendTo('.tb-window-content-shortcuts-table');
-            });
-        }
-
-        $('<a href="javascript:;" class="tb-window-content-shortcuts">Shortcuts</a>').appendTo('.tb-window-tabs');
+        // add them to the dialog
+        $toolboxSettings.appendTo('.tb-window-content');
+        $('<a href="javascript:;" class="tb-window-content-toolbox">Toolox Settings</a>').addClass('active').appendTo('.tb-window-tabs');
+        $('.tb-help-main').attr('currentpage', 'tb-window-content-toolbox');
 
         // Settings to toggle the modules
         var htmlmodules = '\
@@ -488,11 +438,95 @@ function notifier() {
             <p>\
                 <label><input type="checkbox" id="notifierEnabled" ' + ((notifierEnabled) ? "checked" : "") + '> Enable Notifier (queue counts and desktop notifications)</label>\
             </p>\
-            <div class="tb-help-main-content">Here you can disable the several toolbox modules.</div>\
+            <div class="tb-help-main-content">Here you can enable/disable Toolbox modules.</div>\
             </div>\
             ';
         $(htmlmodules).appendTo('.tb-window-content').hide();
         $('<a href="javascript:;" class="tb-window-content-modules">Toggle Modules</a>').appendTo('.tb-window-tabs');
+
+
+        var $notifierSettings = $('<div class="tb-window-content-notifier">\
+            <p>\
+                Multireddit of subs you want displayed in the modqueue counter:<br>\
+                <input type="text" name="modsubreddits" value="' + TBUtils.htmlEncode(unescape(modSubreddits)) + '">\
+            </p>\
+            <p>\
+                Multireddit of subs you want displayed in the unmoderated counter:<br>\
+                <input type="text" name="unmoderatedsubreddits" value="' + TBUtils.htmlEncode(unescape(unmoderatedSubreddits)) + '">\
+            </p>\
+            <p>\
+                Multireddit of subs you want displayed in the modmail counter:<br>\
+                <input type="text" name="modmailsubreddits" value="' + TBUtils.htmlEncode(unescape(modmailSubreddits)) + '"' + ((modmailSubredditsFromPro) ? " disabled" : "") + '><br/>\
+                <label><input type="checkbox" name="modmailsubredditsfrompro"' + ((modmailSubredditsFromPro) ? " checked" : "") + '> Use filtered subreddits from ModMail Pro (overrides the list above)</label>\
+            </p>\
+            <p>\
+                <label><input type="checkbox" name="unmoderatedon" ' + unmoderatedonchecked + '> Show icon for unmoderated.</label>\
+            </p>\
+            <p>\
+                <label><input type="checkbox" name="consolidatedmessages" ' + consolidatedmessageschecked + '> Consolidate notifications (x new messages) instead of individual notifications.</label>\
+            </p>\
+            <p>\
+                <label style="width: 30%; display: inline-block;"><input type="checkbox" name="messagenotifications" ' + messagenotificationschecked + '> Get notifications for new messages</label>\
+                <label><input type="checkbox" name="messageunreadlink" ' + messageunreadlinkchecked + '> Link to /message/unread/ if unread messages are present</label>\
+            </p>\
+            <p>\
+                <label style="width: 30%; display: inline-block;"><input type="checkbox" name="modmailnotifications" ' + modmailnotificationschecked + '> Get modmail notifications</label>\
+                <!-- <label><input type="checkbox" name="modmailunreadlink" ' + modmailunreadlinkchecked + '> Link to /r/' + modmailFilteredSubreddits + '/message/moderator/unread/ if unread messages are present</label> -->\
+                <label><input type="checkbox" name="modmailunreadlink" ' + modmailunreadlinkchecked + '> Link to /message/moderator/unread/ if unread messages are present</label>\
+            </p>\
+            <p>\
+            <label><input type="checkbox" id="straightToInbox" ' + ((straightToInbox) ? "checked" : "") + '> When clicking a comment notification go to the inbox.</label>\
+            </p>\
+            <p>\
+                <label><input type="checkbox" name="modnotifications" ' + modnotificationschecked + '> Get modqueue notifications</label>\
+            </p>\
+            <p>\
+                <label><input type="checkbox" name="unmoderatednotifications" ' + unmoderatednotificationschecked + '> Get unmoderated queue notifications</label>\
+            </p>\
+            <div class="tb-help-main-content">Edit notifier settings</div>\
+        </div>').hide();
+
+        // get the checkbox change handler
+        $notifierSettings.find('input[name=modmailsubredditsfrompro]').change(function (){
+            $('input[name=modmailsubreddits]').prop('disabled', this.checked);
+        });
+
+        // Add notifier settings to dialog
+        $notifierSettings.appendTo('.tb-window-content');
+        $('<a href="javascript:;" class="tb-window-content-notifier">Notifier</a>').appendTo('.tb-window-tabs');
+
+        // TODO: what were these for? can we drop them?
+        //$("input[name=modsubreddits]").val(unescape(modSubreddits));
+        //$("input[name=unmoderatedsubreddits]").val(unescape(unmoderatedSubreddits));
+
+        // Edit shortcuts
+        //console.log(htmlshorcuts);
+        var htmlshorcuts = '\
+        <div class="tb-window-content-shortcuts">\
+        <table class="tb-window-content-shortcuts-table"><tr><td>name</td><td> url </td><td class="tb-window-content-shortcuts-td-remove"> remove</td></tr>\
+        </table>\
+        <a class="tb-add-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconAdd + '" /></a>\
+        <div class="tb-help-main-content">Add or remove shortcuts here!</div>\
+        </div>\
+            ';
+        $(htmlshorcuts).appendTo('.tb-window-content').hide();
+
+        if ($.isEmptyObject(shortcuts2)) {
+            $('<tr class="tb-window-content-shortcuts-tr"><td><input type="text" name="name"> </td><td> <input type="text" name="url">  <td><td class="tb-window-content-shortcuts-td-remove"> \
+        <a class="tb-remove-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconClose + '" /></a></td></tr>\
+        ').appendTo('.tb-window-content-shortcuts-table');
+
+        } else {
+            $.each(shortcuts2, function (index, value) {
+                shortcutinput = '<tr class="tb-window-content-shortcuts-tr"><td><input type="text" value="' + TBUtils.htmlEncode(unescape(index)) + '" name="name"> </td><td> <input type="text" value="' + TBUtils.htmlEncode(unescape(value)) + '" name="url"> <td><td class="tb-window-content-shortcuts-td-remove">\
+        <a class="tb-remove-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconClose + '" /></a></td></tr>\
+        <br><br>';
+                //console.log(shortcutinput);
+                $(shortcutinput).appendTo('.tb-window-content-shortcuts-table');
+            });
+        }
+
+        $('<a href="javascript:;" class="tb-window-content-shortcuts">Shortcuts</a>').appendTo('.tb-window-tabs');
 
         // Settings to toggle the modules
         var htmlmodtools = '\
@@ -505,12 +539,6 @@ function notifier() {
                 </p>\
                 <p>\
                 <label><input type="checkbox" id="linktoqueues" ' + ((linkToQueues) ? "checked" : "") + '> Link to subreddit queue on mod pages</label>\
-                </p>\
-                <p>\
-                <label><input type="checkbox" id="removalreasons" ' + ((removalreasons) ? "checked" : "") + '> Enable removal reasons</label>\
-                </p>\
-                <p>\
-                <label><input type="checkbox" id="commentreasons" ' + ((commentreasons) ? "checked" : "") + '> Enable removal reasons for comments</label>\
                 </p>\
                 <p>\
                 <label><input type="checkbox" id="rtscomment" ' + ((rtscomment) ? "checked" : "") + '> Post user summery when submitting to /r/reportthespammers</label>\
@@ -528,6 +556,21 @@ function notifier() {
         $(htmlmodtools).appendTo('.tb-window-content').hide();
         if (qtEnabled) {
             $('<a href="javascript:;" class="tb-window-content-modtools">Queue Tools</a>').appendTo('.tb-window-tabs');
+        }
+
+        // Settings to toggle the modules
+        var htmlremovalreasons = '\
+            <div class="tb-window-content-removalreasons">\
+             <p>\
+             <label><input type="checkbox" id="commentreasons" ' + ((commentreasons) ? "checked" : "") + '> Enable removal reasons for comments</label>\
+             </p>\
+            <div class="tb-help-main-content">Settings for Removal Reasons.</div>\
+            </div>\
+            ';
+
+        $(htmlremovalreasons).appendTo('.tb-window-content').hide();
+        if (rrEnabled) {
+            $('<a href="javascript:;" class="tb-window-content-removalreasons">Removal Reasons</a>').appendTo('.tb-window-tabs');
         }
 
         // Settings for the comment module
@@ -611,7 +654,7 @@ function notifier() {
         //	$("input[name=shortcuts]").val(unescape(shortcuts));
     }
 
-    $('body').on('click', '.tb-settings-import, .tb-settings-export', function (e) {
+    $body.on('click', '.tb-settings-import, .tb-settings-export', function (e) {
         var sub = $("input[name=settingssub]").val();
         if (!sub) return;
 
@@ -634,37 +677,42 @@ function notifier() {
     });
 
     // Open the settings
-    $('body').on('click', '.tb-toolbarsettings', function () {
+    $body.on('click', '.tb-toolbarsettings', function () {
         showSettings();
         TB.injectSettings();
     });
 
     // change tabs
-    $('body').on('click', '.tb-window-tabs a', function () {
-        var tab = $(this).attr('class');
-        $('.tb-help-main').attr('currentpage', tab);
+    $body.on('click', '.tb-window-tabs a', function () {
+        var tab = $(this).attr('class'),
+            $tb_help_mains = $('.tb-help-main');
+
+        $('.tb-window-tabs a').removeClass('active');
+        $(this).addClass('active');
+
+        $tb_help_mains.attr('currentpage', tab);
         // if we have module name, give that to the help button
         if ($(this).data('module')) {
-            $('.tb-help-main').data('module', $(this).data('module'));
+            $tb_help_mains.data('module', $(this).data('module'));
         }
         $('.tb-window-content').children().hide();
         $('div.' + tab).show();
     });
 
     // remove a shortcut
-    $('body').on('click', '.tb-remove-shortcuts', function () {
+    $body.on('click', '.tb-remove-shortcuts', function () {
         $(this).closest('.tb-window-content-shortcuts-tr').remove();
     });
 
     // add a shortcut
-    $('body').on('click', '.tb-add-shortcuts', function () {
+    $body.on('click', '.tb-add-shortcuts', function () {
         $('<tr class="tb-window-content-shortcuts-tr"><td><input type="text" name="name"> </td><td> <input type="text" name="url">  <td><td class="tb-window-content-shortcuts-td-remove"> \
         <a class="tb-remove-shortcuts" href="javascript:void(0)"><img src="data:image/png;base64,' + TBui.iconClose + '" /></a></td></tr>\
         ').appendTo('.tb-window-content-shortcuts-table');
     });
 
     // Save the settings
-    $('body').on('click', '.tb-save', function () {
+    $body.on('click', '.tb-save', function () {
         var messagenotificationssave = $("input[name=messagenotifications]").is(':checked');
         if (messagenotificationssave === true) {
             TBUtils.setSetting('Notifier', 'messagenotifications', true);
@@ -729,12 +777,30 @@ function notifier() {
         }
         TBUtils.setSetting('Notifier', 'unmoderatedsubreddits', unmoderatedSubreddits);
 
+        // pull filtered subreddits from MMP?
+        modmailSubredditsFromPro = $("input[name=modmailsubredditsfrompro]")[0].checked; // $()[0].checked is a million times faster than other methods
+        TBUtils.setSetting('Notifier', 'modmailsubredditsfrompro', modmailSubredditsFromPro);
+
         modmailSubreddits = $("input[name=modmailsubreddits]").val();
-        if (modmailSubreddits !== TBUtils.getSetting('Notifier', 'modmailsubreddits', '')) {
-            TBUtils.setSetting('Notifier', 'modmailcount', 0);
-            TBUtils.setSetting('Notifier', 'lastseenmodmail', -1);
+        modmailFilteredSubreddits = modmailSubreddits;
+
+        if (modmailSubredditsFromPro) {
+            // use MMP's filtered subs
+            // we don't want to overwrite the user's regular settings, just bypass them,
+            // so don't actually save modmailSubreddits if they are using filtered subs from MMP
+
+            modmailFilteredSubreddits = 'mod';
+            if (TBUtils.getSetting('ModMailPro', 'filteredsubs', []).length > 0) {
+                modmailFilteredSubreddits += '-' + TBUtils.getSetting('ModMailPro', 'filteredsubs', []).join('-');
+            }
+        } else {
+            // save manually set filtered subs
+            if (modmailSubreddits !== TBUtils.getSetting('Notifier', 'modmailsubreddits', '')) {
+                TBUtils.setSetting('Notifier', 'modmailcount', 0);
+                TBUtils.setSetting('Notifier', 'lastseenmodmail', -1);
+            }
+            TBUtils.setSetting('Notifier', 'modmailsubreddits', modmailSubreddits);
         }
-        TBUtils.setSetting('Notifier', 'modmailsubreddits', modmailSubreddits);
 
         TBUtils.setSetting('Notifier', 'compacthide', $("#compactHide").prop('checked'));
 
@@ -742,12 +808,13 @@ function notifier() {
         TBUtils.setSetting('Utils', 'betaMode', $("#betaMode").prop('checked'));
 
         // Save shortcuts
-        if ($('.tb-window-content-shortcuts-tr').length === 0) {
+        var $shortcuts = $('.tb-window-content-shortcuts-tr');
+        if ($shortcuts.length === 0) {
             TBUtils.setSetting('Notifier', 'shortcuts2', {});
         } else {
             shortcuts2 = {};
 
-            $('.tb-window-content-shortcuts-tr').each(function () {
+            $shortcuts.each(function () {
                 var $this = $(this),
                     name = $this.find('input[name=name]').val(),
                     url = $this.find('input[name=url]').val();
@@ -771,15 +838,17 @@ function notifier() {
         TBUtils.setSetting('ModMatrix', 'enabled', $("#modmatrixEnabled").prop('checked'));
         TBUtils.setSetting('Notifier', 'enabled', $("#notifierEnabled").prop('checked'));
 
-        // Save MTE settings.
+        // Save QT settings.
         TBUtils.setSetting('QueueTools', 'hideactioneditems', $("#hideactioneditems").prop('checked'));
         TBUtils.setSetting('QueueTools', 'ignoreonapprove', $("#ignoreonapprove").prop('checked'));
-        TBUtils.setSetting('RemovalReasons', 'removalreasons', $("#removalreasons").prop('checked'));
-        TBUtils.setSetting('RemovalReasons', 'commentreasons', $("#commentreasons").prop('checked'));
         TBUtils.setSetting('QueueTools', 'rtscomment', $("#rtscomment").prop('checked'));
         TBUtils.setSetting('QueueTools', 'sortmodqueue', $("#sortmodqueue").prop('checked'));
         TBUtils.setSetting('QueueTools', 'sortunmoderated', $("#sortunmoderated").prop('checked'));
         TBUtils.setSetting('QueueTools', 'linktoqueues', $("#linktoqueues").prop('checked'));
+
+        // Save RR settings.
+        //TBUtils.setSetting('RemovalReasons', 'removalreasons', $("#removalreasons").prop('checked'));
+        TBUtils.setSetting('RemovalReasons', 'commentreasons', $("#commentreasons").prop('checked'));
 
         // save cache settings.
         TBUtils.setSetting('cache', 'longlength', $("input[name=longLength]").val());
@@ -791,12 +860,12 @@ function notifier() {
 
 
         $('.tb-settings').remove();
-        $('body').css('overflow', 'auto');
+        $body.css('overflow', 'auto');
         window.location.reload();
     });
 
 
-    $('body').on('click', '.tb-help-main', function () {
+    $body.on('click', '.tb-help-main', function () {
         var $this = $(this),
             tab = $(this).attr('currentpage'),
             module = $this.data('module');
@@ -840,9 +909,9 @@ function notifier() {
     });
 
     // Close the Settings menu
-    $('body').on('click', '.tb-close', function () {
+    $body.on('click', '.tb-close', function () {
         $('.tb-settings').remove();
-        $('body').css('overflow', 'auto');
+        $body.css('overflow', 'auto');
     });
 
     //
@@ -858,7 +927,7 @@ function notifier() {
         TBUtils.setSetting('Notifier', 'lastseenmodmail', now);
         modmailCount = TBUtils.setSetting('Notifier', 'modmailcount', 0);
 
-        $.getJSON('http://www.reddit.com/r/' + modmailSubreddits + '/about/message/moderator/unread.json', function (json) {
+        $.getJSON('http://www.reddit.com/r/' + modmailFilteredSubreddits + '/message/moderator/unread.json', function (json) {
             $.each(json.data.children, function (i, value) {
 
                 var unreadmessageid = value.data.name;
@@ -894,27 +963,32 @@ function notifier() {
         //
 
         function updateMessagesCount(count) {
+            var $mail = $('#mail'),
+                $mailCount = $('#mailCount'),
+                $mailcount = $('#mailcount'),
+                $tb_mail = $('#tb-mail'),
+                $tb_mailCount = $('#tb-mailCount');
             if (count < 1) {
-                $('#mailCount').empty();
-                $('#mail').attr('class', 'nohavemail');
-                $('#mail').attr('title', 'no new mail!');
-                $('#mail').attr('href', 'http://www.reddit.com/message/inbox/');
-                $('#mailcount').attr('href', 'http://www.reddit.com' + messageunreadurl);
-                $('#tb-mail').attr('class', 'nohavemail');
-                $('#tb-mail').attr('title', 'no new mail!');
-                $('#tb-mail').attr('href', 'http://www.reddit.com/message/inbox/');
+                $mailCount.empty();
+                $mail.attr('class', 'nohavemail');
+                $mail.attr('title', 'no new mail!');
+                $mail.attr('href', 'http://www.reddit.com/message/inbox/');
+                $mailcount.attr('href', 'http://www.reddit.com' + messageunreadurl);
+                $tb_mail.attr('class', 'nohavemail');
+                $tb_mail.attr('title', 'no new mail!');
+                $tb_mail.attr('href', 'http://www.reddit.com/message/inbox/');
                 $('#tb-mailCount').attr('href', 'http://www.reddit.com/message/inbox/');
             } else {
-                $('#mail').attr('class', 'havemail');
-                $('#mail').attr('title', 'new mail!');
-                $('#mail').attr('href', 'http://www.reddit.com' + messageunreadurl);
-                $('#mailcount').attr('href', 'http://www.reddit.com' + messageunreadurl);
-                $('#tb-mail').attr('class', 'havemail');
-                $('#tb-mail').attr('title', 'new mail!');
-                $('#tb-mail').attr('href', 'http://www.reddit.com' + messageunreadurl);
-                $('#tb-mailCount').attr('href', 'http://www.reddit.com' + messageunreadurl);
+                $mail.attr('class', 'havemail');
+                $mail.attr('title', 'new mail!');
+                $mail.attr('href', 'http://www.reddit.com' + messageunreadurl);
+                $mailcount.attr('href', 'http://www.reddit.com' + messageunreadurl);
+                $tb_mail.attr('class', 'havemail');
+                $tb_mail.attr('title', 'new mail!');
+                $tb_mail.attr('href', 'http://www.reddit.com' + messageunreadurl);
+                $tb_mailCount.attr('href', 'http://www.reddit.com' + messageunreadurl);
             }
-            $('#tb-mailCount').text('[' + count + ']');
+            $tb_mailCount.text('[' + count + ']');
 
             if (count > 0) {
                 $('#mailCount').text('[' + count + ']');
@@ -930,20 +1004,23 @@ function notifier() {
         }
 
         function updateModMailCount(count) {
+            var $modmail = $('#modmail'),
+                $tb_modmail = $('#tb-modmail');
             if (count < 1) {
-                $('#tb-modmail').attr('class', 'nohavemail');
-                $('#tb-modmail').attr('title', 'no new mail!');
-                $('#tb-modmail').attr('href', 'http://www.reddit.com/r/' + modmailSubreddits + '/about/message/moderator');
+                $tb_modmail.attr('class', 'nohavemail');
+                $tb_modmail.attr('title', 'no new mail!');
+                // $tb_modmail.attr('href', 'http://www.reddit.com/r/' + modmailFilteredSubreddits + '/message/moderator');
+                $tb_modmail.attr('href', 'http://www.reddit.com/message/moderator');
             } else {
-                $('#modmail').attr('class', 'havemail');
-                $('#modmail').attr('title', 'new mail!');
-                $('#modmail').attr('href', 'http://www.reddit.com' + modmailunreadurl);
-                $('#tb-modmail').attr('class', 'havemail');
-                $('#tb-modmail').attr('title', 'new mail!');
-                $('#tb-modmail').attr('href', 'http://www.reddit.com' + modmailunreadurl);
+                $modmail.attr('class', 'havemail');
+                $modmail.attr('title', 'new mail!');
+                $modmail.attr('href', 'http://www.reddit.com' + modmailunreadurl);
+                $tb_modmail.attr('class', 'havemail');
+                $tb_modmail.attr('title', 'new mail!');
+                $tb_modmail.attr('href', 'http://www.reddit.com' + modmailunreadurl);
             }
             $('#tb-modmailcount').text('[' + count + ']');
-            // $('#tb-modmail').attr('href', 'http://www.reddit.com/message/moderator/');
+            // $tb_modmail.attr('href', 'http://www.reddit.com/message/moderator/');
         }
 
         if (!newLoad && (now - lastchecked) < checkInterval) {
@@ -1236,7 +1313,9 @@ function notifier() {
         // Modmail
         //
         // getting unread modmail, will not show replies because... well the api sucks in that regard.
-        $.getJSON('http://www.reddit.com/r/' + modmailSubreddits + '/about/message/moderator.json', function (json) {
+        $.getJSON('http://www.reddit.com/r/' + modmailFilteredSubreddits + '/message/moderator.json', function (json) {
+            console.log('getting modmail');
+
             var count = json.data.children.length || 0;
             if (count === 0) {
                 TBUtils.setSetting('Notifier', 'modmailcount', count);
@@ -1339,7 +1418,7 @@ function notifier() {
     if (notifierEnabled) {
         setInterval(getmessages, checkInterval);
         getmessages();
-    } else { //this is a temp hack until 2.2
+    } else { // todo: this is a temp hack until 2.2
         TBUtils.setSetting('Notifier', 'unreadmessagecount', 0);
         TBUtils.setSetting('Notifier', 'modqueuecount', 0);
         TBUtils.setSetting('Notifier', 'unmoderatedcount', 0);
@@ -1350,8 +1429,8 @@ function notifier() {
 
 (function() {
     // wait for storage
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage");
+    window.addEventListener("TBUtilsLoaded", function () {
+        console.log("got tbutils");
         notifier();
     });
 })();

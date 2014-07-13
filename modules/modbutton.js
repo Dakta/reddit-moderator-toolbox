@@ -17,7 +17,10 @@ modButton.register_setting(
         "title": "Saved subs (for quick access)"
     });
 // can't call this inside because it doesn't know the default value yet
-modButton.settings['sublist']["args"] = [TB.utils.mySubs, modButton.setting('sublist')];
+// can't call it plain because it uses TB.utils.mySubs
+TB.utils.getModSubs(function init() {
+    modButton.settings['sublist']["args"] = [TB.utils.mySubs, modButton.setting('sublist')];
+});
 
 modButton.register_setting(
     "rememberlastaction", {
@@ -43,6 +46,7 @@ modButton.register_setting(
         "title": "Enable Global Action button"
     });
 
+var $body = $('body');
 
 // Add mod button to all users
 modButton.processThing = function processThing(thing) {
@@ -53,7 +57,7 @@ modButton.processThing = function processThing(thing) {
         // Defer info gathering until button is clicked.
         $(thing).find('.buttons li:last').before('<li><a href="javascript:;" class="global-mod-button">' + modButton.buttonName + '</a></li>');
     }
-}
+};
 
 // need this for RES NER support
 modButton.run = function run() {
@@ -87,7 +91,7 @@ modButton.updateSavedSubs = function updateSavedSubs() {
     //
     // Refresh the settings tab and role tab sub dropdowns and saved subs tabls
     //
-    var $popups = $('body').find('.mod-popup'),
+    var $popups = $body.find('.mod-popup'),
         $savedSubsLists = $popups.find('.saved-subs');
 
     // clear out the current stuff
@@ -115,6 +119,14 @@ modButton.updateSavedSubs = function updateSavedSubs() {
             }
         });
     });
+
+    $.each(TB.utils.mySubs, function (i, subreddit) {
+        $popups.find('select.' + modButton.OTHER)
+            .append($('<option>', {
+                    value: subreddit
+                })
+                .text('/r/' + subreddit));
+    });
 };
 
 modButton.init = function init() {
@@ -139,7 +151,7 @@ modButton.init = function init() {
 
 
     // Mod button clicked
-    $('body').on('click', '.global-mod-button', function (event) {
+    $body.on('click', '.global-mod-button', function (event) {
         var benbutton = event.target; //huehuehue
         $(benbutton).text('loading...');
 
@@ -239,6 +251,12 @@ modButton.init = function init() {
             top: event.pageY - 10,
             display: 'block'
         });
+
+
+        // // wtf even happened to this originally?
+        // $.each(TB.utils.mySubs, function (i, v) {
+        //     $popup.find('select.'+modButton.OTHER).append($('<option></option>').text(this).attr('value', this));
+        // });
 
         if (rememberLastAction) {
             $popup.find('select.mod-action').val(lastaction);
@@ -353,7 +371,7 @@ modButton.init = function init() {
     });
 
     // 'save' button clicked...  THIS IS WHERE WE BAN PEOPLE, PEOPLE!
-    $('body').on('click', '.mod-popup .save, .global-button', function () {
+    $body.on('click', '.mod-popup .save, .global-button', function () {
 
         var $button = $(this),
             $popup = $button.parents('.mod-popup'),
@@ -499,18 +517,18 @@ modButton.init = function init() {
     });
 
     // 'cancel' button clicked
-    $('body').on('click', '.mod-popup .close', function () {
+    $body.on('click', '.mod-popup .close', function () {
         $(this).parents('.mod-popup').remove();
     });
 
-    $('body').on('click', '.nuke-comment-chain', function () {
+    $body.on('click', '.nuke-comment-chain', function () {
         var $popup = $(this).parents('.mod-popup'),
             thing_id = $popup.find('.thing_id').text();
 
         $.log(thing_id);
     });
 
-    $('body').on('click', '.tb-popup-tabs .user_flair', function () {
+    $body.on('click', '.tb-popup-tabs .user_flair', function () {
         var $popup = $(this).parents('.mod-popup'),
             $status = $popup.find('.status'),
             user = $popup.find('.user').text(),
@@ -530,7 +548,7 @@ modButton.init = function init() {
 
 
     // Edit save button clicked.
-    $('body').on('click', '.flair-save', function () {
+    $body.on('click', '.flair-save', function () {
         var $popup = $(this).parents('.mod-popup'),
             $status = $popup.find('.status'),
             user = $popup.find('.user').text(),
@@ -586,7 +604,7 @@ modButton.init = function init() {
 
 
     // Edit save button clicked.
-    $('body').on('click', '.setting-save', function () {
+    $body.on('click', '.setting-save', function () {
         var $popup = $(this).parents('.mod-popup'),
             $savedSubsList = $popup.find('.saved-subs'),
             $status = $popup.find('.status');
@@ -630,8 +648,8 @@ TB.register_module(modButton);
 }
 
 (function () {
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage");
+    window.addEventListener("TBObjectLoaded", function () {
+        console.log("got tbobject");
         modbutton();
     });
 })();

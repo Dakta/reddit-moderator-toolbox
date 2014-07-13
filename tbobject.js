@@ -60,7 +60,7 @@ TB = {
                     initLoop();
                 }
             }, 50);
-        };
+        }
     },
 
     injectSettings: function injectSettings() {
@@ -105,7 +105,9 @@ TB = {
                     $settings = $('<div class="tb-window-content-'+module.shortname.toLowerCase()+'" style="display: none;"><div class="tb-help-main-content"></div></div>');
 
                 $tab.data('module', module.shortname);
-
+                
+                var $body = $('body');
+                
                 for (var i=0; i < module.settingsList.length; i++) {
                     var setting = module.settingsList[i],
                         options = module.settings[setting];
@@ -173,7 +175,8 @@ TB = {
                             $setting.append(options.title+':<br/>');
                             $setting.append(TB.modules.SyntaxHighlighter.themeSelect);
                             $setting.find('select').attr('id', module.shortname+'_syntax_theme');
-                            $setting.append($('<pre class="syntax-example" id="'+module.shortname+'_syntax_theme_css">\
+                            $setting.append($('\
+                                <pre class="syntax-example" id="'+module.shortname+'_syntax_theme_css">\
     /* This is just some example code*/\n\
     body {\n\
         font-family: sans-serif, "Helvetica Neue", Arial;\n\
@@ -188,10 +191,10 @@ TB = {
         border-bottom: 1px solid #9A9A9A; \n\
         box-shadow: 0px 1px 3px 1px #B3C2D1;\n\
     }\n\
-</pre>'));
+                                </pre>'));
                             execAfterInject.push(function() {
                                 // Syntax highlighter selection stuff
-                                $('body').addClass('mod-toolbox-ace');
+                                $body.addClass('mod-toolbox-ace');
                                 var editorSettings = ace.edit(module.shortname+'_syntax_theme_css');
                                 editorSettings.setTheme("ace/theme/"+module.setting(setting));
                                 if(TBUtils.browser == 'chrome') {
@@ -200,7 +203,7 @@ TB = {
                                 editorSettings.getSession().setMode("ace/mode/css");
 
                                 $('#'+module.shortname+'_syntax_theme').val(module.setting(setting));
-                                $('body').on('change keydown', '#'+module.shortname+'_syntax_theme', function() {
+                                $body.on('change keydown', '#'+module.shortname+'_syntax_theme', function() {
                                     var thingy = $(this);
                                     setTimeout(function() {
                                         editorSettings.setTheme("ace/theme/"+thingy.val());
@@ -232,7 +235,7 @@ TB = {
                     // stuff to exec after inject:
                     for (var i = 0; i < execAfterInject.length; i++) {
                         execAfterInject[i]();
-                    };
+                    }
                 } else {
                     // module has no settings, for now don't inject a tab
                 }
@@ -243,7 +246,7 @@ TB = {
                 // this way we don't have to touch notifier.js to make it work.
                 //
                 // We get one additional click handler for each module that gets injected.
-                $('body').bindFirst('click', '.tb-save', function (event) {
+                $body.bindFirst('click', '.tb-save', function (event) {
                     // handle module enable/disable on Toggle Modules first
                     var $moduleEnabled = $('.tb-window-content .tb-window-content-modules #'+module.shortname+'Enabled').prop('checked');
                     module.setting('enabled', $moduleEnabled);
@@ -298,7 +301,7 @@ TB.Module = function Module(name) {
         "betamode": true,
         "devmode": false,
         "needs_mod_subs": false
-    }
+    };
 
     this.settings = {};
     this.settingsList = [];
@@ -314,7 +317,7 @@ TB.Module = function Module(name) {
             "default": false,
             "betamode": false, // optional
             "hidden": false, // optional
-            "title": "Enable " + this.name + "."
+            "title": "Enable " + this.name
         });
 
     // PUBLIC: settings interface
@@ -342,7 +345,7 @@ TB.Module = function Module(name) {
     this.init = function init() {
         // pass
     };
-}
+};
 
 
 // This needs to be called last. There's probably some clever way to do it, but I haven't figured it out.
@@ -351,8 +354,10 @@ TB.Module = function Module(name) {
 }
 
 (function() {
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage (objects)");
+    window.addEventListener("TBUtilsLoaded", function () {
+        console.log("got tbutils");
         tbobject();
+        var event = new CustomEvent("TBObjectLoaded");
+        window.dispatchEvent(event);
     });
 })();

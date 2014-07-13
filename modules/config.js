@@ -1,10 +1,13 @@
 function tbconfig() {
-    if (!TBUtils.logged || !TBUtils.getSetting('TBConfig', 'enabled', true)) return;
+    if (!TBUtils.logged || !TBUtils.getSetting('TBConfig', 'enabled', true))
+        return;
     $.log('Loading Configuration Module');
+    
+    var $body = $('body');
 
-    var toolbox = $('#moderation_tools').find('.content'),
-        //configLink = '<li><img src="data:image/png;base64,' + TBui.iconWrench + '"/><span class="separator"></span><a href="javascript:;" class="toolbox-edit" title="toolbox configuration for this subreddit">toolbox configuration</a></li>',
-        configLink = '<li><a href="javascript:;" class="toolbox-edit" title="toolbox configuration for this subreddit">toolbox configuration</a></li>',
+    var toolbox = $('#moderation_tools').find('.content .icon-menu'),
+        configLink = '<li><img src="data:image/png;base64,' + TBui.iconWrench + '"/><span class="separator"></span><a href="javascript:;" class="toolbox-edit" title="toolbox configuration for this subreddit">toolbox configuration</a></li>',
+        //configLink = '<li><a href="javascript:;" class="toolbox-edit" title="toolbox configuration for this subreddit">toolbox configuration</a></li>',
         subreddit = TBUtils.post_site,
         config = TBUtils.config;
 
@@ -23,13 +26,13 @@ function tbconfig() {
         $(toolbox).append(configLink);
     }
 
-    $('body').on('click', '.toolbox-edit', function () {
+    $body.on('click', '.toolbox-edit', function () {
         showSettings();
     });
 
-    function postToWiki(page, data, isJSON, updateAM) {
+    function postToWiki(page, data, reason, isJSON, updateAM) {
         $.log("posting to wiki");
-        TBUtils.postToWiki(page, subreddit, data, isJSON, updateAM, function done(succ, err) {
+        TBUtils.postToWiki(page, subreddit, data, reason, isJSON, updateAM, function done(succ, err) {
             $.log("save succ = " + succ);
             if (!succ) {
                 $.log(err.responseText, true)
@@ -52,7 +55,7 @@ function tbconfig() {
                     $('.update-reasons').click(function () {
                         config.removalReasons = resp;
 
-                        postToWiki('toolbox', config, true);
+                        postToWiki('toolbox', config, 'import removal reasons from CSS', true);
 
                         $('.reasons-notice').hide();
                     });
@@ -82,6 +85,7 @@ function tbconfig() {
                 <div class="wiki-edit-area" style="display: none;">\
                     <textarea class="edit-wikidata" rows="20" cols="20" style="display: none;"></textarea><br>\
                     <div id="edit-wikidata-div" style="display: none; height: 500px;"></div><br>\
+                    <input type="text" name="edit-wikidata-note" placeholder="wiki page revision reason (optional)" />\
                 </div>\
                 <div class="reasons-notice" style="display:none;">\
                     <br><br>\
@@ -104,15 +108,15 @@ function tbconfig() {
 </div>\
         ';
         $(html).appendTo('body').show();
-        $('body').css('overflow', 'hidden');
+        $body.css('overflow', 'hidden');
     }
 
-    $('body').on('click', '.tb-close', function () {
+    $body.on('click', '.tb-close', function () {
         $('.tb-settings').remove();
-        $('body').css('overflow', 'auto');
+        $body.css('overflow', 'auto');
     });
 
-    $('body').on('click', '.edit-domains', function () {
+    $body.on('click', '.edit-domains', function () {
 
         var html = $('\
 <div class="tb-page-overlay edit-domains-form " comment="the white fade out over the page, we can do without, personally like it">\
@@ -143,7 +147,7 @@ function tbconfig() {
                     var tags = JSON.parse(json.data.content_md).domainTags;
                     if (tags) {
                         config.domainTags = tags;
-                        postToWiki('toolbox', config, true);
+                        postToWiki('toolbox', config, '.import click', true);
                     }
                     $(html).remove();
                 }
@@ -155,7 +159,7 @@ function tbconfig() {
         });
     });
 
-    $('body').on('click', '.edit-reasons', function () {
+    $body.on('click', '.edit-reasons', function () {
 
         var html = $('\
 <div class="tb-page-overlay edit-reasons-form" comment="the white fade out over the page, we can do without, personally like it">\
@@ -165,14 +169,14 @@ function tbconfig() {
 \
 \
 <div class="tb-form">\
-<p style="text-align:center;"><textarea class="edit-area" style="width: 800px; height: 150px;"></textarea><br/><input type="text" style="width: 150px;" name="flair-text" placeholder="flair text" /> <input type="text" style="width: 150px;" name="flair-css" placeholder="flair css" /></p>\
+<p style="text-align:center;"><textarea class="edit-area" style="width: 800px; height: 150px;"></textarea><br/><input type="text" style="width: 150px;" name="flair-text" placeholder="flair text" /> <input type="text" style="width: 150px;" name="flair-css" placeholder="flair css" /><br/><input type="text" name="edit-note" placeholder="reason for edit (optional)" /></p>\
 <span class="edit-save-area">\
 &nbsp;&nbsp;(click on a reason below to edit it.)</span><br><br>\
 <table ><tbody /></table></div>\
 \
 \
 </div>\
-<div class="tb-window-footer" ><input class="save" type="button" value="new"/><input class="delete" style="display:none" type="button" value="delete"/></div>\
+<div class="tb-window-footer"><input class="save" type="button" value="new"/> <input class="delete" style="display:none" type="button" value="delete"/></div>\
 <div class="tb-help-config-content">\
 <h2>Input options:</h2>\
 <p>\
@@ -244,12 +248,26 @@ function tbconfig() {
 
         // Do things about stuff.
         $(html).on('click', '.save', function () {
-            var reasonsNum = $('.edit-area').attr('reason');
-            var reasonText = $('.edit-area').val();
-            var reasonFlairText = $("input[name=flair-text]").val();
-            var reasonFlairCSS = $("input[name=flair-css]").val();
+            var reasonsNum = $('.edit-area').attr('reason'),
+                reasonText = $('.edit-area').val(),
+                reasonFlairText = $("input[name=flair-text]").val(),
+                reasonFlairCSS = $("input[name=flair-css]").val(),
+                editNote = $("input[name=edit-note]").val()
 
             if (reasonsNum) {
+                // is there's a reasonsNum, it's an existant reason
+                if (!editNote) {
+                    // default note
+                    editNote = 'update';
+                }
+                editNote += ', reason #'+reasonsNum;
+            } else {
+                // otherwise, it's a new reason
+                editNote = 'create new reason'+(editNote ? ', '+editNote : '');
+            }
+
+            if (reasonsNum) {
+                // if it's a current reason
                 config.removalReasons.reasons[reasonsNum].text = escape(reasonText);
                 config.removalReasons.reasons[reasonsNum].flairText = reasonFlairText;
                 config.removalReasons.reasons[reasonsNum].flairCSS = reasonFlairCSS;
@@ -269,7 +287,7 @@ function tbconfig() {
 
                 config.removalReasons.reasons.push(reason);
             }
-            postToWiki('toolbox', config, true);
+            postToWiki('toolbox', config, editNote, true);
             if (TBUtils.configCache[subreddit] !== undefined) {
                 delete TBUtils.configCache[subreddit]; // should this use TBUtils.clearCache?  I'm not clear on what this does. -al
             }
@@ -286,7 +304,7 @@ function tbconfig() {
             } else {
                 return;
             }
-            postToWiki('toolbox', config, true);
+            postToWiki('toolbox', config, 'delete reason #'+reasonsNum, true);
             if (TBUtils.configCache[subreddit] !== undefined) {
                 delete TBUtils.configCache[subreddit]; // should this use TBUtils.clearCache?  I'm not clear on what this does. -al
             }
@@ -298,7 +316,7 @@ function tbconfig() {
         });
     });
 
-    $('body').on('click', '.reason-settings', function () {
+    $body.on('click', '.reason-settings', function () {
         var html = '\
 <div class="tb-page-overlay reason-setting-form " comment="the white fade out over the page, we can do without, personally like it">\
 <div class="tb-window-wrapper-two" comment="the window itself">\
@@ -396,7 +414,7 @@ function tbconfig() {
                 reasons: config.removalReasons.reasons || []
             };
 
-            postToWiki('toolbox', config, true);
+            postToWiki('toolbox', config, 'updated removal reason settings', true);
 
             $('.reason-setting-form').remove();
         });
@@ -406,7 +424,7 @@ function tbconfig() {
         });
     });
 
-    $('body').on('click', '.tb-config-help', function () {
+    $body.on('click', '.tb-config-help', function () {
         var helpwindow = window.open('', '', 'width=500,height=600,location=0,menubar=0,top=100,left=100')
         var htmlcontent = $(this).parents('.tb-window-wrapper-two').find('.tb-help-config-content').html();
         $.log(htmlcontent, true);
@@ -432,15 +450,15 @@ function tbconfig() {
 
 
 
-    $('body').on('click', '.edit-wiki-page', function (e) {
+    $body.on('click', '.edit-wiki-page', function (e) {
         var page = $(e.target).attr('page'),
-            textArea = $('body').find('.edit-wikidata'),
-            textAreaDiv = $('body').find('#edit-wikidata-div'),
-            saveButton = $('body').find('.save-wiki-data'),
-            editArea = $('body').find('.wiki-edit-area');
+            textArea = $body.find('.edit-wikidata'),
+            textAreaDiv = $body.find('#edit-wikidata-div'),
+            saveButton = $body.find('.save-wiki-data'),
+            editArea = $body.find('.wiki-edit-area');
 
         if (TBUtils.getSetting('syntaxHighlighter', 'enabled', true)) {
-            $('body').addClass('mod-toolbox-ace');
+            $body.addClass('mod-toolbox-ace');
             $(editArea).show();
             $(textAreaDiv).show();
 
@@ -518,16 +536,21 @@ function tbconfig() {
     });
 
 
-    $('body').on('click', '.save-wiki-data, .cancel-wiki-data', function (e) {
+    $body.on('click', '.save-wiki-data, .cancel-wiki-data', function (e) {
         var button = e.target,
             editArea = $('.wiki-edit-area'),
             page = $(button).attr('page'),
             textArea = $('.edit-wikidata'),
             text = $(textArea).val(),
+            editNote = $('input[name=edit-wikidata-note]').val(),
             updateAM = (page === 'automoderator'),
             cancel = (e.target.className == 'cancel-wiki-data')
 
-            $(button).removeAttr('page');
+        if (!editNote) {
+            editNote = 'updated '+page+' configuration';
+        }
+
+        $(button).removeAttr('page');
         $(textArea).val('');
         $(editArea).hide();
 
@@ -538,13 +561,13 @@ function tbconfig() {
         // save the data, and blank the text area.
         // also, yes some of the pages are in JSON, but they aren't JSON objects,
         // so they don't need to be re-strinified.
-        postToWiki(page, text, false, updateAM);
+        postToWiki(page, text, editNote, false, updateAM);
     });
 }
 
 (function() {
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage");
+    window.addEventListener("TBUtilsLoaded", function () {
+        console.log("got tbutils");
         tbconfig();
     });
 })();

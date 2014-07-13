@@ -15,10 +15,10 @@ banList.register_setting(
 
 // extracts a url parameter value from a URL string
 // from http://stackoverflow.com/a/15780907/362042
+// TODO: move to tbutils
 banList.getURLParameter = function getURLParameter(url, name) {
-    return (RegExp(name + '=' + '(.+?)(&|$)').exec(url)||[,null])[1];
-}
-
+    return (new RegExp(name + '=' + '(.+?)(&|$)').exec(url)||[,null])[1];
+};
 
 banList.init = function init() {
     // if (!location.pathname.match(/\/about\/(?:banned)\/?/)) {
@@ -40,9 +40,6 @@ banList.init = function init() {
         $.log("_get_next_ban_page("+after+")");
 
         var parameters = {'limit': 1000, 'after': after};
-
-        // make sure we have the loading icon
-        $loading.show();
 
         after = null;
         last_request = Date.now();
@@ -96,7 +93,7 @@ banList.init = function init() {
                     $.log("  last page");
                     banlist_updating = false;
                     banlist_last_update = Date.now();
-                    $loading.hide();
+                    TB.utils.longLoadSpinner(false);
                 }
             },
             error: function(data) {
@@ -108,7 +105,7 @@ banList.init = function init() {
                 } else {
                     // Did we get logged out during the process, or some other error?
                     banlist_updating = false;
-                    $loading.hide();
+                    TB.utils.longLoadSpinner(false);
                     $num_bans.html("Something went wrong while fetching the banlist. You should reload this page.");
                 }
             }
@@ -145,16 +142,13 @@ banList.init = function init() {
     }
 
     function liveFilter() {
-        // initialize the loading spinner
-        $('#user').parent().spin('small');
-        // hide it
-        $loading = $('.spinner').hide();
+        var $user = $('#user');
 
         // counter for number of bans
         $num_bans = $('<span id="ban_count"></span>');
-        $num_bans.appendTo($('#user').parent());
+        $num_bans.appendTo($user.parent());
 
-        $('#user').prop('placeholder', 'Begin typing to live filter the ban list.');
+        $user.prop('placeholder', 'Begin typing to live filter the ban list.');
 
         $('.banned-table').addClass('filtered');
 
@@ -170,6 +164,8 @@ banList.init = function init() {
                     || (banlist_last_update + time_to_update) <= Date.now())
             ) {
                 banlist_updating = true;
+                TB.utils.longLoadSpinner(true);
+
                 $.log("Updating now")
                 // clean up
                 $('.banned-table table tbody').empty();
@@ -183,19 +179,20 @@ banList.init = function init() {
         }
 
         // text input trigger
-        $('input#user').keyup(function() {
+        var $userInput = $('input#user');
+        $userInput.keyup(function() {
             if ($('.banned-table tr').length > 1000) { return; } // don't live filter
             var value = $(this).val().toLowerCase();
             _filter(value);
         });
 
-        $('input#user').parent().submit(function (e) {
+        $userInput.parent().submit(function (e) {
             _filter($('input#user').val().toLowerCase());
             e.preventDefault();
         });
 
         // we want to populate the table immediately on load.
-        $('input#user').keyup();
+        $userInput.keyup();
     }
 
     if (TBUtils.getSetting('BanList', 'automatic', false)) {
@@ -214,8 +211,8 @@ TB.register_module(banList);
 }
 
 (function() {
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage");
+    window.addEventListener("TBObjectLoaded", function () {
+        console.log("got tbobject");
         banlist();
     });
 })();

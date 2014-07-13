@@ -1,6 +1,9 @@
 function domaintagger() {
-    if (!TBUtils.logged || !TBUtils.getSetting('DomainTagger', 'enabled', false)) return;
+    if (!TBUtils.logged || !TBUtils.getSetting('DomainTagger', 'enabled', false))
+        return;
     $.log('Loading Domain Tagger Module');
+    
+    var $body = $('body');
 
     var YELLOW = '#EAC117', GREEN = '#347235', RED = '#FF0000', BLACK = '#000000';
     var subs = [];
@@ -9,10 +12,10 @@ function domaintagger() {
         run();
     });
 
-    function postToWiki(sub, json) {
+    function postToWiki(sub, json, reason) {
         TBUtils.configCache[sub] = json;
 
-        TBUtils.postToWiki('toolbox', sub, json, true, false, function done(succ, err) {
+        TBUtils.postToWiki('toolbox', sub, json, reason, true, false, function done(succ, err) {
             if (succ) {
                 run();
             } else {
@@ -102,7 +105,7 @@ function domaintagger() {
         });
     }
 
-    $('body').on('click', '.add-domain-tag', function (e) {
+    $body.on('click', '.add-domain-tag', function (e) {
         // TODO: This should use getThingInfo(), but I don't want to introduce any bugs for 2.0 by messing with it.
         var thing = $(e.target).closest('.thing');
         var domain = $(thing).find('span.domain:first').text().replace('(', '').replace(')', '').toLocaleLowerCase();
@@ -137,7 +140,7 @@ function domaintagger() {
             });
     });
 
-    $('body').on('click', '.save-domain', function () {
+    $body.on('click', '.save-domain', function () {
         var popup = $(this).closest('.dtagger-popup'),
             subreddit = popup.find('.domain-name').attr('subreddit');
 
@@ -160,7 +163,7 @@ function domaintagger() {
             if (resp === TBUtils.NO_WIKI_PAGE) {
                 config.domainTags = [];
                 config.domainTags.push(domainTag);
-                postToWiki(subreddit, config);
+                postToWiki(subreddit, config, 'domain tagger: create new Toolbox config');
                 return;
             }
 
@@ -170,13 +173,16 @@ function domaintagger() {
             if (config.domainTags) {
                 var results = $.grep(config.domainTags, function (d) {
                     if (d.name === domainTag.name) {
-                        var idx = config.domainTags.indexOf(d);
+                        var idx = config.domainTags.indexOf(d),
+                            updateType;
                         if (domainTag.color === 'none') {
                             config.domainTags.splice(idx, 1);
+                            updateType = 'delete';
                         } else {
                             config.domainTags[idx] = domainTag;
+                            updateType = 'update';
                         }
-                        postToWiki(subreddit, config);
+                        postToWiki(subreddit, config, updateType+' tag "'+domainTag.name+'"');
 
                         return d;
                     }
@@ -184,18 +190,18 @@ function domaintagger() {
 
                 if (!results || results.length < 1) {
                     config.domainTags.push(domainTag);
-                    postToWiki(subreddit, config);
+                    postToWiki(subreddit, config, 'create tag "'+domainTag.name+'"');
                 }
             } else {
                 config.domainTags = [];
                 config.domainTags.push(domainTag);
-                postToWiki(subreddit, config);
+                postToWiki(subreddit, config, 'create new domain tags object, create tag "'+domainTag.name+'"');
             }
         });
 
     });
 
-    $('body').on('click', '.dtagger-popup .close', function () {
+    $body.on('click', '.dtagger-popup .close', function () {
         $(this).parents('.dtagger-popup').remove();
     });
 
@@ -204,8 +210,8 @@ function domaintagger() {
 
 (function () {
     // wait for storage
-    window.addEventListener("TBStorageLoaded", function () {
-        console.log("got storage");
+    window.addEventListener("TBUtilsLoaded", function () {
+        console.log("got tbutils");
         domaintagger();
     });
 })();

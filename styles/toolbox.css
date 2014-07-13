@@ -1,3 +1,10 @@
+
+/* RES compatibility fix */
+
+.res #BigEditor {
+    margin-bottom: 25px !important;
+}
+
 body.comments-page .content .sitetable .thing.spam.comment:hover, .res-commentBoxes body.comments-page .content .sitetable .thing.spam.comment:hover {
     cursor: pointer;
 }
@@ -26,15 +33,6 @@ body.comments-page .content .sitetable .thing.spam.comment:hover, .res-commentBo
     border-top: solid 1px #A8B5C2;
     left: 0;
     right: 0;
-}
-
-.mod-toolbox #tb-toolbar-mysubs {
-    background-color: rgb(199, 214, 230);
-    border-right: 1px dotted rgb(168, 181, 194);
-    display: inline;
-    padding: 6px; 
-    cursor: pointer;
-    border-left: 1px dotted rgb(168, 181, 194);
 }
 
 .mod-toolbox #tb-bottombar-hidden {
@@ -274,7 +272,7 @@ text-align: left;
 .mod-toolbox .tb-window-wrapper {
     position: relative;
     top: 40px;
-    max-width: 1000px;
+    max-width: 1300px;
     margin-right: auto !important;
     margin-left: auto !important;
     padding: 0 !important;
@@ -296,7 +294,9 @@ text-align: left;
     box-shadow: 0 1px 3px 1px #D6D6D6;
 }
 
-.mod-toolbox .tb-window-wrapper a:hover, .mod-toolbox .tb-window-tabs a:hover {
+.mod-toolbox .tb-window-wrapper a:hover,
+.mod-toolbox .tb-window-tabs a.active,
+.mod-toolbox .tb-window-tabs a:hover {
     color: #000 !important;
 }
 
@@ -315,14 +315,13 @@ text-align: left;
 .mod-toolbox .tb-window-tabs {
     border-bottom: solid 1px #A8B5C2;
     background-color: #C7D6E6;
-    height: 34px;
     font-size: 11px !important;
 }
 
 .mod-toolbox .tb-window-tabs a {
     background-color: #C7D6E6;
     border-right: dotted 1px #A8B5C2;
-    line-height: 34px;
+    display: inline-block;
     padding: 10px !important;
 }
 
@@ -334,6 +333,7 @@ text-align: left;
     line-height: 34px;
 }
 
+.mod-toolbox .tb-window-tabs a.active,
 .mod-toolbox .tb-window-tabs a:hover {
     background-color: #9FBAD6;
 }
@@ -1475,6 +1475,7 @@ border: solid 1px #808080;
 }
 
 .mod-toolbox.res-nightmode .tb-window-wrapper a:hover,
+.mod-toolbox.res-nightmode .tb-window-tabs a.active,
 .mod-toolbox.res-nightmode .tb-window-tabs a:hover {
     color: #000 !important;
 }
@@ -1506,6 +1507,7 @@ border: solid 1px #808080;
     border-right: dotted 1px #39526b;
 }
 
+.mod-toolbox.res-nightmode .tb-window-tabs a.active,
 .mod-toolbox.res-nightmode .tb-window-tabs a:hover {
     background-color: #5D7186;
 }

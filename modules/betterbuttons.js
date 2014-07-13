@@ -3,7 +3,7 @@ function betterbuttons() {
 var betterButtons = new TB.Module('Better Buttons');
 
 //Default settings
-betterButtons.settings["enabled"]["default"] = true;
+betterButtons.settings["enabled"]["default"] = false;
 
 betterButtons.register_setting("enablemodsave", {
     "type": "boolean",
@@ -31,9 +31,15 @@ betterButtons.initModSave = function initModSave() {
                     var item = mutation.addedNodes[i];
                     //Check if the added element is a comment
                     if($(item).is('div.comment')) {
+                        $.log($(item));
+                        $.log("");
+                        
                         //Distinguish the comment
-                        $(item).find('form[action="/post/distinguish"] > .option > a').first().click();
-                        $(item).find('.option > a').get(0).click();
+                        var things = $(item).find('form[action="/post/distinguish"] > .option > a');
+                        $.log(things);
+                        $.log("");
+                        $.log(things.first());
+                        things.first().click();
                         
                         //Stop watching for changes
                         commentObserver.disconnect();
@@ -107,7 +113,7 @@ TB.register_module(betterButtons);
 }
 
 (function() {
-    window.addEventListener("TBStorageLoaded", function () {
+    window.addEventListener("TBObjectLoaded", function () {
         betterbuttons();
     });
 })();
